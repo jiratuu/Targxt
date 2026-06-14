@@ -1,113 +1,127 @@
 // ============================================================
-// TARGXT - FULL SCRIPT CLEAN VERSION
+// TARGXT - FULL SCRIPT (FIX + REVIEWS + ONLINE USERS)
 // ============================================================
 
-// =========================
-// CONFIG (DISCORD WEBHOOK)
-// =========================
-// ⚠️ Mets ton webhook ici si tu veux envoyer les avis sur Discord
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1515751038575968428/jMEinQYBTlDpmJCRZxZt7M73eJFB2ydqb5Ywwb-R3NghQyhE9t3CIRPCgDzoUEiZGZA9";
+// =============================
+// CONFIG
+// =============================
+const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1515751038575968428/jMEinQYBTlDpmJCRZxZt7M73eJFB2ydqb5Ywwb-R3NghQyhE9t3CIRPCgDzoUEiZGZA9";
 
-// ============================================================
+const USER_ID = crypto.randomUUID();
+const ONLINE_KEY = "targxt_online_users";
+
+// =============================
+// INIT GLOBAL STATE
+// =============================
+let currentRating = 0;
+
+// =============================
 // PARTICLES
-// ============================================================
+// =============================
 function initParticles() {
-    const container = document.getElementById("particles");
+    const container = document.getElementById('particles');
     if (!container) return;
 
     const count = 30;
 
     for (let i = 0; i < count; i++) {
-        const p = document.createElement("div");
-        p.className = "particle";
+        const p = document.createElement('div');
+        p.className = 'particle';
 
-        p.style.left = Math.random() * 100 + "%";
-        p.style.width = (Math.random() * 3 + 2) + "px";
+        p.style.left = Math.random() * 100 + '%';
+        p.style.width = (Math.random() * 3 + 2) + 'px';
         p.style.height = p.style.width;
-        p.style.animationDuration = (Math.random() * 15 + 10) + "s";
-        p.style.animationDelay = (Math.random() * 15) + "s";
+        p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+        p.style.animationDelay = (Math.random() * 15) + 's';
 
         const hue = Math.random() > 0.5 ? 280 : 330;
         p.style.background = `hsl(${hue}, 100%, 60%)`;
+        p.style.boxShadow = `0 0 10px hsl(${hue}, 100%, 60%)`;
 
         container.appendChild(p);
     }
 }
 
-// ============================================================
-// SEARCH TYPE
-// ============================================================
+// =============================
+// TABS SYSTEM
+// =============================
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    if (tab === 'simple') {
+        document.querySelectorAll('.tab')[0].classList.add('active');
+        document.getElementById('simpleSearch').classList.add('active');
+    } else {
+        document.querySelectorAll('.tab')[1].classList.add('active');
+        document.getElementById('advancedSearch').classList.add('active');
+    }
+}
+
+// =============================
+// DETECT SEARCH TYPE
+// =============================
 function detectSearchType(query) {
     query = query.trim();
 
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query)) return "email";
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query)) return 'email';
 
-    const phone = query.replace(/\D/g, "");
+    const phone = query.replace(/[\s\.\-\/\(\)]/g, '');
     if (/^0[1-9]\d{8}$/.test(phone) || /^\+33\d{9}$/.test(phone)) {
-        return "phone";
+        return 'phone';
     }
 
-    if (query.includes(" ")) return "fullname";
+    if (query.includes(' ')) return 'fullname';
 
-    return "general";
+    return 'general';
 }
 
-// ============================================================
+// =============================
 // SEARCH DB
-// ============================================================
+// =============================
 function searchLocalDB(query, type) {
     const q = query.toLowerCase().trim();
-    const db = window.PERSONNES_DATA || [];
+    const persons = window.PERSONNES_DATA || [];
 
-    return db.filter(p => {
-        const prenom = (p.prenom || "").toLowerCase();
-        const nom = (p.nom || "").toLowerCase();
+    return persons.filter(p => {
 
-        const fullText = `
-            ${p.prenom || ""}
-            ${p.nom || ""}
-            ${p.email || ""}
-            ${p.telephone || ""}
-            ${p.ville || ""}
-            ${p.adresse || ""}
-            ${p.codePostal || ""}
-            ${p.dateNaissance || ""}
-            ${p.lieuNaissance || ""}
-            ${p.genre || ""}
-        `.toLowerCase();
+        const prenom = (p.prenom || '').toLowerCase();
+        const nom = (p.nom || '').toLowerCase();
 
-        if (type === "email") {
-            return (p.email || "").toLowerCase().includes(q);
+        const fullText = Object.values(p).join(" ").toLowerCase();
+
+        if (type === 'email') {
+            return (p.email || '').toLowerCase().includes(q);
         }
 
-        if (type === "phone") {
-            return (p.telephone || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""));
+        if (type === 'phone') {
+            const cleanDB = (p.telephone || '').replace(/\D/g, '');
+            const cleanQ = q.replace(/\D/g, '');
+            return cleanDB.includes(cleanQ);
         }
 
-        if (type === "fullname") {
-            const parts = q.split(" ");
+        if (type === 'fullname') {
+            const parts = q.split(/\s+/);
             if (parts.length >= 2) {
                 return (
-                    (prenom.includes(parts[0]) && nom.includes(parts[1])) ||
-                    (prenom.includes(parts[1]) && nom.includes(parts[0]))
+                    prenom.includes(parts[0]) && nom.includes(parts[1]) ||
+                    prenom.includes(parts[1]) && nom.includes(parts[0])
                 );
             }
-            return false;
         }
 
         return fullText.includes(q);
     });
 }
 
-// ============================================================
+// =============================
 // ENRICH DATA
-// ============================================================
+// =============================
 function enrichData(results) {
     return results.map(p => ({
         ...p,
         score: Math.floor(Math.random() * 100),
-        tags: generateTags(p),
-        source: "LOCAL_ENGINE"
+        tags: generateTags(p)
     }));
 }
 
@@ -120,50 +134,48 @@ function generateTags(p) {
     return tags;
 }
 
-// ============================================================
+// =============================
 // DISPLAY RESULTS
-// ============================================================
-function displayResults(results) {
-    const container = document.getElementById("resultCards");
-    const resultsSection = document.getElementById("results");
-    const noResults = document.getElementById("noResults");
+// =============================
+function displayResults(people) {
+    const container = document.getElementById('resultCards');
+    const resultsSection = document.getElementById('results');
+    const noResultsSection = document.getElementById('noResults');
 
-    container.innerHTML = "";
+    container.innerHTML = '';
 
-    if (!results || results.length === 0) {
-        resultsSection.classList.add("hidden");
-        noResults.classList.remove("hidden");
+    if (!people.length) {
+        resultsSection.classList.add('hidden');
+        noResultsSection.classList.remove('hidden');
         return;
     }
 
-    noResults.classList.add("hidden");
-    resultsSection.classList.remove("hidden");
+    noResultsSection.classList.add('hidden');
+    resultsSection.classList.remove('hidden');
 
-    document.getElementById("resultCount").textContent = results.length;
+    document.getElementById('resultCount').textContent = people.length;
 
     const fields = [
         "nom", "prenom", "email", "telephone",
-        "ville", "adresse", "codePostal",
-        "dateNaissance", "lieuNaissance", "genre"
+        "ville", "adresse", "codePostal"
     ];
 
-    results.forEach((p, i) => {
+    people.forEach((p, i) => {
 
-        const initials = ((p.prenom?.[0] || "") + (p.nom?.[0] || "")).toUpperCase();
+        const initials = ((p.prenom?.[0] || '') + (p.nom?.[0] || '')).toUpperCase();
 
         const body = fields.map(f => {
-            const v = p[f];
-            if (!v) return "";
+            if (!p[f]) return "";
             return `
                 <div class="card-field">
                     <span class="label">${f}</span>
-                    <span class="value">${v}</span>
+                    <span class="value">${p[f]}</span>
                 </div>
             `;
         }).join("");
 
-        const card = document.createElement("div");
-        card.className = "result-card";
+        const card = document.createElement('div');
+        card.className = 'result-card';
 
         card.innerHTML = `
             <div class="card-header">
@@ -173,202 +185,201 @@ function displayResults(results) {
                 </div>
                 <span class="card-source">#${i + 1}</span>
             </div>
-
-            <div class="card-body">
-                ${body}
-            </div>
-
-            ${p.tags?.length ? `
-                <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-                    ${p.tags.map(t => `
-                        <span style="font-size:10px;padding:3px 8px;border:1px solid #bf00ff;color:#bf00ff;border-radius:20px;">
-                            ${t}
-                        </span>
-                    `).join("")}
-                </div>
-            ` : ""}
+            <div class="card-body">${body}</div>
         `;
 
         container.appendChild(card);
     });
 }
 
-// ============================================================
+// =============================
 // SEARCH
-// ============================================================
+// =============================
 async function performSearch() {
-    const input = document.getElementById("searchInput");
+    const input = document.getElementById('searchInput');
     const query = input.value.trim();
 
-    if (!query || query.length < 2) return;
+    if (!query) return;
 
-    document.getElementById("loading").classList.remove("hidden");
-    document.getElementById("results").classList.add("hidden");
-    document.getElementById("noResults").classList.add("hidden");
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('noResults').classList.add('hidden');
 
     await new Promise(r => setTimeout(r, 400));
 
     const type = detectSearchType(query);
-    let results = searchLocalDB(query, type);
+    const results = searchLocalDB(query, type);
 
-    results = enrichData(results);
+    document.getElementById('loading').classList.add('hidden');
 
-    document.getElementById("loading").classList.add("hidden");
-
-    displayResults(results);
+    displayResults(enrichData(results));
 }
 
 function setSearch(v) {
-    document.getElementById("searchInput").value = v;
+    document.getElementById('searchInput').value = v;
     performSearch();
 }
 
-// ============================================================
+// =============================
 // ADVANCED SEARCH
-// ============================================================
+// =============================
 function performAdvancedSearch() {
-    const name = document.getElementById("advName").value.toLowerCase();
-    const email = document.getElementById("advEmail").value.toLowerCase();
-    const phone = document.getElementById("advPhone").value.replace(/\D/g, "");
-    const city = document.getElementById("advCity").value.toLowerCase();
-    const zip = document.getElementById("advZip").value.toLowerCase();
+    const name = document.getElementById('advName').value.toLowerCase();
+    const email = document.getElementById('advEmail').value.toLowerCase();
+    const phone = document.getElementById('advPhone').value.replace(/\D/g, '');
 
-    const db = window.PERSONNES_DATA || [];
+    const persons = window.PERSONNES_DATA || [];
 
-    const results = db.filter(p => {
+    const results = persons.filter(p => {
+        const pPhone = (p.telephone || '').replace(/\D/g, '');
         return (
-            (!name || (`${p.prenom} ${p.nom}`.toLowerCase().includes(name))) &&
-            (!email || (p.email || "").toLowerCase().includes(email)) &&
-            (!phone || (p.telephone || "").replace(/\D/g, "").includes(phone)) &&
-            (!city || (p.ville || "").toLowerCase().includes(city)) &&
-            (!zip || (p.codePostal || "").toLowerCase().includes(zip))
+            (!name || `${p.prenom} ${p.nom}`.toLowerCase().includes(name)) &&
+            (!email || (p.email || '').toLowerCase().includes(email)) &&
+            (!phone || pPhone.includes(phone))
         );
     });
 
     displayResults(enrichData(results));
 }
 
-// ============================================================
-// TABS
-// ============================================================
-function switchTab(tab) {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-
-    if (tab === "simple") {
-        document.getElementById("simpleSearch").classList.add("active");
-        document.querySelectorAll(".tab")[0].classList.add("active");
-    } else {
-        document.getElementById("advancedSearch").classList.add("active");
-        document.querySelectorAll(".tab")[1].classList.add("active");
-    }
-}
-
-// ============================================================
-// REVIEWS SYSTEM
-// ============================================================
-let rating = 0;
-
+// =============================
+// REVIEW PANEL
+// =============================
 function openReviewPanel() {
-    document.getElementById("reviewOverlay").classList.remove("hidden");
+    document.getElementById('reviewOverlay').classList.remove('hidden');
 }
 
 function closeReviewPanel(e) {
     if (e) e.stopPropagation();
-    document.getElementById("reviewOverlay").classList.add("hidden");
-    resetReview();
+    document.getElementById('reviewOverlay').classList.add('hidden');
 }
 
-function setRating(v) {
-    rating = v;
+function setRating(value) {
+    currentRating = value;
 
-    document.querySelectorAll(".star").forEach((s, i) => {
-        s.classList.toggle("active", i < v);
+    document.querySelectorAll('.star').forEach((s, i) => {
+        s.classList.toggle('active', i < value);
+        s.textContent = i < value ? "★" : "☆";
     });
 
-    const texts = ["", "Très mauvais", "Mauvais", "Correct", "Bon", "Excellent"];
-    document.getElementById("ratingText").textContent = texts[v];
+    document.getElementById('ratingText').textContent =
+        `Note : ${value}/5`;
 }
 
-function submitReview() {
-    const pseudo = document.getElementById("reviewPseudo").value || "Anonyme";
+// char counter
+document.addEventListener("input", (e) => {
+    if (e.target.id === "reviewDesc") {
+        document.getElementById("charCount").textContent =
+            `${e.target.value.length}/500`;
+    }
+});
+
+// =============================
+// SEND REVIEW
+// =============================
+async function submitReview() {
     const desc = document.getElementById("reviewDesc").value;
+    const pseudo = document.getElementById("reviewPseudo").value || "Anonyme";
 
-    if (!rating) return showMsg("Note requise", "error");
-
-    const review = {
-        pseudo,
-        rating,
-        description: desc,
-        date: new Date().toISOString()
-    };
-
-    // local save
-    const list = JSON.parse(localStorage.getItem("targxt_reviews")) || [];
-    list.push(review);
-    localStorage.setItem("targxt_reviews", JSON.stringify(list));
-
-    // discord webhook
-    if (DISCORD_WEBHOOK_URL) {
-        fetch(DISCORD_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                content: "⭐ Nouvel avis",
-                embeds: [{
-                    title: "Avis utilisateur",
-                    color: 0xffaa00,
-                    fields: [
-                        { name: "Pseudo", value: pseudo },
-                        { name: "Note", value: "⭐".repeat(rating) },
-                        { name: "Commentaire", value: desc || "Aucun" }
-                    ]
-                }]
-            })
-        });
+    if (!currentRating) {
+        alert("Choisis une note !");
+        return;
     }
 
-    showMsg("Avis envoyé ✔", "success");
+    const payload = {
+        content:
+`⭐ NOUVEL AVIS TARGXT ⭐
+Note: ${currentRating}/5
+Pseudo: ${pseudo}
+Message: ${desc || "Aucun message"}`
+    };
 
-    setTimeout(() => closeReviewPanel(), 1000);
+    const msg = document.getElementById("reviewMessage");
+
+    try {
+        if (DISCORD_WEBHOOK) {
+            await fetch(DISCORD_WEBHOOK, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        msg.className = "review-message success";
+        msg.textContent = "Avis envoyé !";
+        msg.classList.remove("hidden");
+
+    } catch (err) {
+        msg.className = "review-message error";
+        msg.textContent = "Erreur envoi.";
+        msg.classList.remove("hidden");
+    }
 }
 
-function showMsg(t, type) {
-    const m = document.getElementById("reviewMessage");
-    m.textContent = t;
-    m.className = `review-message ${type}`;
-    m.classList.remove("hidden");
-
-    setTimeout(() => m.classList.add("hidden"), 2500);
+// =============================
+// ONLINE USERS SYSTEM
+// =============================
+function getUsers() {
+    return JSON.parse(localStorage.getItem(ONLINE_KEY) || "{}");
 }
 
-function resetReview() {
-    rating = 0;
-    document.querySelectorAll(".star").forEach(s => s.classList.remove("active"));
-    document.getElementById("reviewPseudo").value = "";
-    document.getElementById("reviewDesc").value = "";
-    document.getElementById("ratingText").textContent = "Cliquez pour noter";
+function saveUsers(users) {
+    localStorage.setItem(ONLINE_KEY, JSON.stringify(users));
 }
 
-// ============================================================
+function updateUser() {
+    const users = getUsers();
+    users[USER_ID] = Date.now();
+    saveUsers(users);
+}
+
+function cleanupUsers() {
+    const users = getUsers();
+    const now = Date.now();
+
+    for (const id in users) {
+        if (now - users[id] > 15000) {
+            delete users[id];
+        }
+    }
+
+    saveUsers(users);
+}
+
+function updateOnlineUI() {
+    const users = getUsers();
+    const count = Object.keys(users).length;
+
+    const el = document.getElementById("apiStatus");
+    if (el) {
+        el.textContent = `👥 ${count} EN LIGNE | MODE: LOCAL ENGINE`;
+    }
+}
+
+// heartbeat
+setInterval(() => {
+    updateUser();
+    cleanupUsers();
+    updateOnlineUI();
+}, 3000);
+
+// remove on exit
+window.addEventListener("beforeunload", () => {
+    const users = getUsers();
+    delete users[USER_ID];
+    saveUsers(users);
+});
+
+// =============================
 // INIT
-// ============================================================
+// =============================
 document.addEventListener("DOMContentLoaded", () => {
     initParticles();
+
+    updateUser();
+    updateOnlineUI();
 
     document.getElementById("searchInput")?.addEventListener("keydown", e => {
         if (e.key === "Enter") performSearch();
     });
-
-    const hero = document.querySelector(".hero");
-    if (hero) {
-        hero.style.opacity = "0";
-        hero.style.transform = "translateY(30px)";
-
-        setTimeout(() => {
-            hero.style.transition = "0.8s ease";
-            hero.style.opacity = "1";
-            hero.style.transform = "translateY(0)";
-        }, 200);
-    }
 });
