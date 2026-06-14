@@ -11,6 +11,30 @@
 
 <body>
 
+<!-- =========================
+     MAINTENANCE MODE POPUP
+========================= -->
+<div id="maintenanceOverlay" class="maintenance-overlay">
+    <div class="maintenance-popup">
+        <h1>🔧 Maintenance en cours</h1>
+
+        <p>
+            Le développeur du site fait de son mieux pour réparer cette erreur.
+        </p>
+
+        <p class="sub">
+            Pour rester informé :
+        </p>
+
+        <a href="https://discord.gg/GC7HZthZ9" target="_blank" class="discord-btn">
+            💬 Rejoindre le Discord
+        </a>
+    </div>
+</div>
+
+<!-- =========================
+     BACKGROUND
+========================= -->
 <div class="grid-overlay"></div>
 <div id="particles"></div>
 
@@ -23,15 +47,7 @@
     <div class="header-status" style="position:absolute;left:50%;transform:translateX(-50%);">
         <span class="status-dot"></span>
         <span class="status-text">SYSTEME ACTIF</span>
-        <span id="apiStatus" style="margin-left:12px;font-family:var(--font-mono);font-size:11px;color:#888;">
-            MODE: LOCAL ENGINE
-        </span>
-    </div>
-
-    <!-- Onglet Avis en haut à droite -->
-    <div class="review-tab" onclick="openReviewPanel()">
-        <span class="review-tab-icon">★</span>
-        <span class="review-tab-text">Avis</span>
+        <span id="apiStatus">MODE: LOCAL ENGINE</span>
     </div>
 </header>
 
@@ -46,45 +62,24 @@
 
     <p class="subtitle">Interrogez la database du site</p>
 
-    <!-- TABS -->
     <div class="tabs">
         <button class="tab active" onclick="switchTab('simple')">Recherche simple</button>
         <button class="tab" onclick="switchTab('advanced')">Recherche avancée</button>
     </div>
 
-    <!-- SIMPLE SEARCH -->
+    <!-- SIMPLE -->
     <div id="simpleSearch" class="tab-content active">
-
         <div class="search-container">
-
             <div class="search-box">
-                <span class="search-icon">⌕</span>
-
-                <input type="text" id="searchInput"
-                    placeholder="Prenom, Nom, Email, Telephone..."
-                    autocomplete="off">
-
-                <button id="searchBtn" onclick="performSearch()">
-                    <span>RECHERCHER</span> 🔎
-                </button>
+                <input type="text" id="searchInput" placeholder="Prenom, Nom, Email, Telephone...">
+                <button onclick="performSearch()">RECHERCHER 🔎</button>
             </div>
-
-            <div class="search-hints">
-                <span>Ex: </span>
-                <button class="hint-btn" onclick="setSearch('Dupont')">Nom</button>
-                <button class="hint-btn" onclick="setSearch('email')">email</button>
-                <button class="hint-btn" onclick="setSearch('0612345678')">telephone</button>
-                <button class="hint-btn" onclick="setSearch('Jean Dupont')">nom complet</button>
-            </div>
-
         </div>
     </div>
 
-    <!-- ADVANCED SEARCH -->
+    <!-- ADVANCED -->
     <div id="advancedSearch" class="tab-content">
-
         <div class="advanced-box">
-
             <input id="advName" placeholder="Nom / Prenom">
             <input id="advEmail" placeholder="Email">
             <input id="advPhone" placeholder="Téléphone">
@@ -94,80 +89,43 @@
             <button onclick="performAdvancedSearch()">
                 RECHERCHE AVANCÉE 🔎
             </button>
-
         </div>
-
     </div>
 
 </div>
 </section>
 
-<div id="loading" class="loading hidden">
-    <div class="loader"></div>
-    <p>Recherche en cours...</p>
-</div>
-
 <section id="results" class="results hidden">
     <div class="results-header">
-        <h3>Résultats de la recherche</h3>
-        <div class="results-meta"><span id="resultCount">0</span> résultat(s)</div>
+        <h3>Résultats</h3>
+        <div><span id="resultCount">0</span> résultat(s)</div>
     </div>
     <div id="resultCards"></div>
 </section>
 
 <section id="noResults" class="no-results hidden">
-    <div class="no-results-content">
-        <span class="no-results-icon">◈</span>
-        <h3>Aucun résultat trouvé</h3>
-        <p>Essayez un autre terme</p>
-    </div>
+    <h3>Aucun résultat trouvé</h3>
 </section>
 
 </main>
 
-<!-- PANEL AVIS - OVERLAY -->
-<div id="reviewOverlay" class="review-overlay hidden" onclick="closeReviewPanel(event)">
-    <div class="review-panel" onclick="event.stopPropagation()">
-        
-        <div class="review-header">
-            <h3>✩ Donnez votre avis ✩</h3>
-            <button class="review-close" onclick="closeReviewPanel(event)">✕</button>
-        </div>
-
-        <div class="review-stars">
-            <span class="star-label">Votre note :</span>
-            <div class="stars-container">
-                <span class="star" data-value="1" onclick="setRating(1)">☆</span>
-                <span class="star" data-value="2" onclick="setRating(2)">☆</span>
-                <span class="star" data-value="3" onclick="setRating(3)">☆</span>
-                <span class="star" data-value="4" onclick="setRating(4)">☆</span>
-                <span class="star" data-value="5" onclick="setRating(5)">☆</span>
-            </div>
-            <span id="ratingText" class="rating-text">Cliquez pour noter</span>
-        </div>
-
-        <div class="review-description">
-            <label for="reviewDesc">Votre commentaire (optionnel) :</label>
-            <textarea id="reviewDesc" placeholder="Partagez votre expérience..." maxlength="500"></textarea>
-            <span id="charCount" class="char-count">0/500</span>
-        </div>
-
-        <div class="review-pseudo">
-            <label for="reviewPseudo">Pseudo (optionnel) :</label>
-            <input type="text" id="reviewPseudo" placeholder="Anonyme" maxlength="30">
-        </div>
-
-        <button class="review-submit" onclick="submitReview()">
-            ✦ ENVOYER L'AVIS ✦
-        </button>
-
-        <div id="reviewMessage" class="review-message hidden"></div>
-
-    </div>
-</div>
-
 <script src="db.js"></script>
 <script src="script.js"></script>
+
+<!-- Activation maintenance -->
+<script>
+const MAINTENANCE_MODE = true;
+
+document.addEventListener("DOMContentLoaded", () => {
+    const overlay = document.getElementById("maintenanceOverlay");
+
+    if (!MAINTENANCE_MODE) {
+        overlay.style.display = "none";
+    } else {
+        document.body.style.overflow = "hidden";
+    }
+});
+</script>
 
 </body>
 </html>
