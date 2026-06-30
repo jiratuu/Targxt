@@ -412,4 +412,4 @@ async def on_command_error(ctx, error):
 # === DÉMARRAGE ===
 if __name__ == "__main__":
     keep_alive()
-    bot.run("MTUxNTk5MTQ0ODgzNzY4NTMwOA.G4G2BV.hnLkBk8dBNTN-mHAC1DQ2I2lWTBGxexr78CTAA")
+    bot.run("MTUxNTk5MTQ0ODgzNzY4NTMwOA.GxTQmj.yNuw49G2qdrxpl6CVb5KWKMgUMhEMeU9iydD2M")
